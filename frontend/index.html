@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>File System Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg0: #050b18;
+      --bg1: #080f1e;
+      --bg2: #0c1524;
+      --bg3: #111d2e;
+      --bd: #1a2a40;
+      --bd2: #223348;
+      --t0: #e8f0fe;
+      --t1: #9db8d4;
+      --t2: #5a7a96;
+      --t3: #2d4a63;
+      --pu: #7c6af7;
+      --pu-d: rgba(124, 106, 247, 0.14);
+      --pu-b: #a48fff;
+      --gr: #22c97a;
+      --gr-d: rgba(34, 201, 122, 0.12);
+      --am: #f5a623;
+      --am-d: rgba(245, 166, 35, 0.12);
+      --re: #ef4444;
+      --re-d: rgba(239, 68, 68, 0.10);
+      --fn: 'JetBrains Mono', monospace;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg0);
+      color: var(--t0);
+      font-family: var(--fn);
+      overflow: hidden
+    }
+
+    #app {
+      display: flex;
+      height: 100vh
+    }
+
+    /* ── sidebar ── */
+    #sb {
+      width: 256px;
+      min-width: 256px;
+      background: var(--bg1);
+      border-right: 1px solid var(--bd);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    #sb-top {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--bd)
+    }
+
+    .logo {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--t0);
+      letter-spacing: .05em
+    }
+
+    .sub {
+      font-size: 10px;
+      color: var(--t3);
+      margin-top: 3px
+    }
+
+    #nav {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--bd)
+    }
+
+    .nb {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      color: var(--t2);
+      font-family: var(--fn);
+      font-size: 11.5px;
+      cursor: pointer;
+      text-align: left;
+      transition: background .15s, color .15s
+    }
+
+    .nb:hover {
+      background: var(--bg3);
+      color: var(--t1)
+    }
+
+    .nb.on {
+      background: var(--pu-d);
+      color: var(--pu-b)
+    }
+
+    #ftree {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 0
+    }
+
+    #ftree::-webkit-scrollbar {
+      width: 4px
+    }
+
+    #ftree::-webkit-scrollbar-thumb {
+      background: var(--bd2);
+      border-radius: 2px
+    }
+
+    .tn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--t1);
+      border-radius: 5px;
+      transition: background .12s, color .12s;
+      user-select: none;
+      padding: 4px 8px 4px 0
+    }
+
+    .tn:hover {
+      background: var(--bg3);
+      color: var(--t0)
+    }
+
+    .tn.sel {
+      background: var(--pu-d);
+      color: var(--pu-b)
+    }
+
+    .tn .arr {
+      font-size: 9px;
+      color: var(--t3);
+      width: 12px;
+      flex-shrink: 0;
+      transition: transform .18s;
+      display: inline-block;
+      text-align: center
+    }
+
+    .tn .arr.op {
+      transform: rotate(90deg)
+    }
+
+    .tn .nm {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .tn .x {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: var(--re);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      transition: opacity .15s;
+      flex-shrink: 0
+    }
+
+    .tn:hover .x {
+      opacity: 1
+    }
+
+    #credits {
+      padding: 12px 14px;
+      border-top: 1px solid var(--bd);
+      font-size: 9.5px;
+      color: var(--t3);
+      line-height: 1.7
+    }
+
+    #credits em {
+      color: var(--t2);
+      font-style: normal
+    }
+
+    /* ── main ── */
+    #mn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    #tb {
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--bd);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg0);
+      flex-shrink: 0
+    }
+
+    .pt {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--t0)
+    }
+
+    .pd {
+      font-size: 10px;
+      color: var(--t3);
+      margin-top: 2px
+    }
+
+    #sbadge {
+      padding: 5px 12px;
+      background: var(--bg2);
+      border: 1px solid var(--bd2);
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--pu-b);
+      display: none;
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    #ebar {
+      padding: 9px 24px;
+      background: var(--re-d);
+      border-bottom: 1px solid rgba(239, 68, 68, .2);
+      color: #fca5a5;
+      font-size: 11.5px;
+      display: none;
+      align-items: center;
+      justify-content: space-between
+    }
+
+    #ebar button {
+      background: none;
+      border: none;
+      color: var(--re);
+      cursor: pointer;
+      font-size: 14px
+    }
+
+    #ct {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px
+    }
+
+    #ct::-webkit-scrollbar {
+      width: 5px
+    }
+
+    #ct::-webkit-scrollbar-thumb {
+      background: var(--bd2);
+      border-radius: 2px
+    }
+
+    .sec {
+      display: none
+    }
+
+    .sec.on {
+      display: block
+    }
+
+    /* ── cards ── */
+    .card {
+      background: var(--bg1);
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      padding: 20px
+    }
+
+    .ct {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--t2);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 14px
+    }
+
+    .ht {
+      font-size: 10.5px;
+      color: var(--t3);
+      margin-bottom: 10px;
+      min-height: 16px;
+      line-height: 1.5
+    }
+
+    .ht b {
+      color: var(--pu-b);
+      font-weight: normal
+    }
+
+    .g2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 860px
+    }
+
+    input.fi {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 7px;
+      border: 1px solid var(--bd2);
+      background: var(--bg0);
+      color: var(--t0);
+      font-family: var(--fn);
+      font-size: 12px;
+      outline: none;
+      margin-bottom: 10px;
+      transition: border-color .15s
+    }
+
+    input.fi:focus {
+      border-color: var(--pu)
+    }
+
+    input.fi::placeholder {
+      color: var(--t3)
+    }
+
+    input.fi:disabled {
+      opacity: .3;
+      cursor: not-allowed
+    }
+
+    .ttog {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px
+    }
+
+    .tb2 {
+      flex: 1;
+      padding: 7px;
+      border-radius: 6px;
+      border: 1px solid var(--bd2);
+      background: transparent;
+      color: var(--t2);
+      font-family: var(--fn);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all .15s
+    }
+
+    .tb2.on {
+      border-color: var(--pu);
+      background: var(--pu-d);
+      color: var(--pu-b)
+    }
+
+    .btn {
+      width: 100%;
+      padding: 9px;
+      border-radius: 7px;
+      border: 1px solid var(--bd2);
+      background: transparent;
+      color: var(--t1);
+      font-family: var(--fn);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .15s
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--pu);
+      color: var(--pu-b);
+      background: var(--pu-d)
+    }
+
+    .btn:disabled {
+      opacity: .3;
+      cursor: not-allowed
+    }
+
+    .btn.p {
+      border-color: var(--pu);
+      background: var(--pu-d);
+      color: var(--pu-b)
+    }
+
+    .btn.d {
+      border-color: #7f1d1d;
+      color: var(--re);
+      background: var(--re-d)
+    }
+
+    .btn.d:hover:not(:disabled) {
+      border-color: var(--re)
+    }
+
+    /* ── svg panel ── */
+    .sp {
+      background: var(--bg1);
+      border: 1px solid var(--bd);
+      border-radius: 12px;
+      overflow: auto;
+      padding: 8px;
+      margin-top: 16px
+    }
+
+    .sp::-webkit-scrollbar {
+      height: 4px
+    }
+
+    .sp::-webkit-scrollbar-thumb {
+      background: var(--bd2);
+      border-radius: 2px
+    }
+
+    /* ── traversal ── */
+    .mtabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 18px
+    }
+
+    .mt {
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--bd2);
+      background: transparent;
+      color: var(--t2);
+      font-family: var(--fn);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all .15s
+    }
+
+    .mt:hover {
+      color: var(--t1);
+      background: var(--bg3)
+    }
+
+    .mt.on {
+      border-color: var(--pu);
+      background: var(--pu-d);
+      color: var(--pu-b)
+    }
+
+    .abox {
+      padding: 12px 16px;
+      border-radius: 8px;
+      border-left: 3px solid var(--am);
+      background: var(--am-d);
+      margin-bottom: 16px;
+      font-size: 11.5px;
+      color: var(--t1);
+      line-height: 1.6
+    }
+
+    .srow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 11px;
+      color: var(--t2)
+    }
+
+    input[type=range] {
+      accent-color: var(--pu);
+      cursor: pointer
+    }
+
+    .crow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px
+    }
+
+    .cb {
+      padding: 8px 20px;
+      border-radius: 7px;
+      border: none;
+      background: var(--pu);
+      color: #fff;
+      font-family: var(--fn);
+      font-size: 12px;
+      cursor: pointer;
+      transition: opacity .15s
+    }
+
+    .cb:hover {
+      opacity: .85
+    }
+
+    .cb.s {
+      background: transparent;
+      border: 1px solid var(--bd2);
+      color: var(--t1)
+    }
+
+    .cb.s:hover {
+      border-color: var(--t2);
+      background: var(--bg3);
+      opacity: 1
+    }
+
+    .sl {
+      font-size: 11px;
+      color: var(--t3)
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px
+    }
+
+    .chip {
+      padding: 4px 11px;
+      border-radius: 20px;
+      font-size: 10.5px;
+      border: 1px solid var(--bd);
+      color: var(--t3);
+      background: transparent;
+      transition: all .3s cubic-bezier(.34, 1.56, .64, 1)
+    }
+
+    .chip.v {
+      border-color: #065f46;
+      background: var(--gr-d);
+      color: #34d399
+    }
+
+    .chip.c {
+      border-color: var(--am);
+      background: var(--am-d);
+      color: var(--am);
+      transform: scale(1.1);
+      box-shadow: 0 0 10px rgba(245, 166, 35, .2)
+    }
+
+    /* ── search ── */
+    .sr {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    input.si {
+      flex: 1;
+      min-width: 160px;
+      padding: 9px 12px;
+      border-radius: 7px;
+      border: 1px solid var(--bd2);
+      background: var(--bg0);
+      color: var(--t0);
+      font-family: var(--fn);
+      font-size: 12px;
+      outline: none;
+      transition: border-color .15s
+    }
+
+    input.si:focus {
+      border-color: var(--pu)
+    }
+
+    input.si::placeholder {
+      color: var(--t3)
+    }
+
+    .sp2 {
+      padding: 9px 14px;
+      border-radius: 7px;
+      border: 1px solid var(--bd2);
+      background: transparent;
+      color: var(--t2);
+      font-family: var(--fn);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all .15s
+    }
+
+    .sp2.on {
+      border-color: var(--pu);
+      background: var(--pu-d);
+      color: var(--pu-b)
+    }
+
+    .sg {
+      padding: 9px 18px;
+      border-radius: 7px;
+      border: none;
+      background: var(--pu);
+      color: #fff;
+      font-family: var(--fn);
+      font-size: 12px;
+      cursor: pointer
+    }
+
+    .sg:hover {
+      opacity: .85
+    }
+
+    .ss {
+      display: flex;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--t2);
+      margin-bottom: 10px;
+      flex-wrap: wrap
+    }
+
+    .mc {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      background: var(--gr-d);
+      border: 1px solid #065f46;
+      color: #34d399;
+      font-size: 11px;
+      margin: 3px
+    }
+
+    .leg {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 10px;
+      color: var(--t2);
+      margin-bottom: 14px;
+      align-items: center
+    }
+
+    .ld {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0
+    }
+
+    /* ── toast ── */
+    #toast {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      z-index: 9999;
+      padding: 10px 18px;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 12px;
+      font-family: var(--fn);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, .4);
+      transform: translateY(60px);
+      opacity: 0;
+      transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), opacity .3s;
+      pointer-events: none
+    }
+
+    #toast.on {
+      transform: translateY(0);
+      opacity: 1
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+
+    <!-- SIDEBAR -->
+    <div id="sb">
+      <div id="sb-top">
+        <div class="logo">⬡ FS Simulator</div>
+        <div class="sub">Trees · DFS · BFS · Animations</div>
+      </div>
+      <div id="nav">
+        <button class="nb on" id="nb-files" onclick="go('files')"> 📁&nbsp; Files</button>
+        <button class="nb" id="nb-tree" onclick="go('tree')"> 🌳&nbsp; Tree View</button>
+        <button class="nb" id="nb-traversal" onclick="go('traversal')">🔄&nbsp; Traversal</button>
+        <button class="nb" id="nb-search" onclick="go('search')"> 🔍&nbsp; Search</button>
+      </div>
+      <div id="ftree"></div>
+      <div id="credits">Logic by <em>you</em> &nbsp;·&nbsp; Frontend &amp; animations by <em>Claude</em><br />FastAPI ·
+        Vanilla JS · SVG</div>
+    </div>
+
+    <!-- MAIN -->
+    <div id="mn">
+      <div id="tb">
+        <div>
+          <div class="pt" id="pt">📁 Files</div>
+          <div class="pd" id="pd">Create, delete, rename and move nodes</div>
+        </div>
+        <div id="sbadge"></div>
+      </div>
+      <div id="ebar"><span id="emsg"></span><button onclick="hideErr()">✕</button></div>
+      <div id="ct">
+
+        <!-- FILES -->
+        <div class="sec on" id="sec-files">
+          <div class="g2">
+            <div class="card">
+              <div class="ct">Create node</div>
+              <div class="ht" id="h-create">Creates inside selected folder (or root /)</div>
+              <input class="fi" id="v-name" placeholder="e.g. notes.txt"
+                onkeydown="if(event.key==='Enter')doCreate()" />
+              <div class="ttog">
+                <button class="tb2 on" id="t-folder" onclick="setCT('folder')">📁 Folder</button>
+                <button class="tb2" id="t-file" onclick="setCT('file')">📄 File</button>
+              </div>
+              <button class="btn p" onclick="doCreate()">Create</button>
+            </div>
+            <div class="card">
+              <div class="ct">Rename</div>
+              <div class="ht" id="h-rename">← Select a node in the sidebar first</div>
+              <input class="fi" id="v-rename" placeholder="New name…" disabled
+                onkeydown="if(event.key==='Enter')doRename()" />
+              <button class="btn" id="b-rename" onclick="doRename()" disabled>Rename</button>
+            </div>
+            <div class="card">
+              <div class="ct">Move</div>
+              <div class="ht" id="h-move">← Select a node, then enter destination</div>
+              <input class="fi" id="v-move" placeholder="e.g. /home/user" disabled
+                onkeydown="if(event.key==='Enter')doMove()" />
+              <button class="btn" id="b-move" onclick="doMove()" disabled>Move</button>
+            </div>
+            <div class="card">
+              <div class="ct">Delete</div>
+              <div class="ht" id="h-delete">← Select a node to delete it</div>
+              <button class="btn d" id="b-delete" onclick="doDelete()" disabled>Delete selected node</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TREE -->
+        <div class="sec" id="sec-tree">
+          <div class="leg">
+            <div style="display:flex;align-items:center;gap:5px">
+              <div class="ld" style="background:#0c1524;border:1px solid #4f46e5"></div>folder
+            </div>
+            <div style="display:flex;align-items:center;gap:5px">
+              <div class="ld" style="background:#080f1e;border:1px solid #334155;border-radius:50%"></div>file
+            </div>
+            <div style="display:flex;align-items:center;gap:5px">
+              <div class="ld" style="background:rgba(124,106,247,.2);border:1px solid #7c6af7"></div>selected
+            </div>
+            <div style="display:flex;align-items:center;gap:5px">
+              <div class="ld" style="background:rgba(34,201,122,.18);border:1px solid #22c97a"></div>match
+            </div>
+            <div style="display:flex;align-items:center;gap:5px">
+              <div class="ld" style="background:rgba(245,166,35,.18);border:1px solid #f5a623"></div>visited
+            </div>
+          </div>
+          <div class="sp">
+            <div id="svg-tree"></div>
+          </div>
+        </div>
+
+        <!-- TRAVERSAL -->
+        <div class="sec" id="sec-traversal">
+          <div class="mtabs">
+            <button class="mt on" id="mt-dfs_recursive" onclick="setTM('dfs_recursive')">DFS Recursive</button>
+            <button class="mt" id="mt-dfs_iterative" onclick="setTM('dfs_iterative')">DFS Iterative</button>
+            <button class="mt" id="mt-bfs" onclick="setTM('bfs')">BFS</button>
+          </div>
+          <div class="abox" id="abox"></div>
+          <div class="srow">
+            Speed:
+            <input type="range" id="spd" min="1" max="9" value="5" style="width:110px" oninput="setSpd(+this.value)" />
+            <span id="spdl">medium</span>
+          </div>
+          <div class="crow">
+            <button class="cb" id="pbtn" onclick="togglePlay()">▶ Play</button>
+            <button class="cb s" onclick="resetTrav()">↺ Reset</button>
+            <span class="sl" id="stl">Step 0 / 0</span>
+          </div>
+          <div class="chips" id="chips"></div>
+          <div class="sp" style="margin-top:16px">
+            <div id="svg-trav"></div>
+          </div>
+        </div>
+
+        <!-- SEARCH -->
+        <div class="sec" id="sec-search">
+          <div class="sr">
+            <input class="si" id="sq" placeholder="Type a file or folder name…"
+              onkeydown="if(event.key==='Enter')doSearch()" />
+            <button class="sp2 on" id="pill-dfs" onclick="setSM('dfs')">DFS</button>
+            <button class="sp2" id="pill-bfs" onclick="setSM('bfs')">BFS</button>
+            <button class="sg" onclick="doSearch()">Search</button>
+          </div>
+          <div class="ss" id="sstats" style="display:none"></div>
+          <div id="smatch" style="margin-bottom:12px"></div>
+          <div class="sp">
+            <div id="svg-search"></div>
+          </div>
+        </div>
+
+      </div><!-- /ct -->
+    </div><!-- /mn -->
+  </div><!-- /app -->
+  <div id="toast"></div>
+
+  <script>
+    'use strict';
+
+    const BASE = 'http://localhost:8000';
+
+    /* ─── state ──────────────────────────────────────────── */
+    let TREE = null;          // full tree from backend
+    let SEL = null;          // selected node object
+    let CTYPE = 'folder';     // create type
+
+    let TM = 'dfs_recursive';  // traversal method
+    let TSTEPS = [], TIDX = -1, TTIMER = null, TSPD = 5;
+
+    let SM = 'dfs';           // search method
+    let SATIMER = null;
+
+    let S_SEL = new Set();    // svg highlight: selected
+    let S_VIS = new Set();    // svg highlight: visited
+    let S_MAT = new Set();    // svg highlight: match
+
+    /* ─── tree helpers ───────────────────────────────────── */
+    function findByPath(node, path) {
+      if (!node) return null;
+      if (node.path === path) return node;
+      for (const child of (node.children || [])) {
+        const found = findByPath(child, path);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    function resolveSel() {
+      if (SEL && TREE) {
+        SEL = findByPath(TREE, SEL.path);
+        if (!SEL) { S_SEL = new Set(); }
+      }
+    }
+
+    /* ─── node registry ──────────────────────────────────── */
+    // Key insight: we NEVER put node data or paths in onclick="..." attributes.
+    // Paths contain "/" which breaks HTML attribute parsing.
+    // Instead we register each node under a numeric key and pass only the key.
+    const REG = new Map();
+    let REGK = 0;
+
+    /* ─── api ────────────────────────────────────────────── */
+    async function call(method, path, body) {
+      try {
+        const opt = { method, headers: { 'Content-Type': 'application/json' } };
+        if (body !== undefined) opt.body = JSON.stringify(body);
+        const r = await fetch(BASE + path, opt);
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || JSON.stringify(d));
+        return d;
+      } catch (e) {
+        showErr(e.message.includes('fetch')
+          ? 'Cannot reach backend — run:  cd backend && uvicorn main:app --reload'
+          : e.message);
+        return null;
+      }
+    }
+
+    /* ─── svg layout ─────────────────────────────────────── */
+    function calcLayout(root) {
+      const XG = 112, YG = 86, POS = {};
+      let li = 0;
+      function place(n, depth) {
+        if (!n.children || !n.children.length) {
+          POS[n.path] = { x: li++ * XG + 70, y: depth * YG + 60, n };
+          return POS[n.path].x;
+        }
+        let first, last;
+        n.children.forEach((c, i) => {
+          const x = place(c, depth + 1);
+          if (i === 0) first = x;
+          last = x;
+        });
+        POS[n.path] = { x: (first + last) / 2, y: depth * YG + 60, n };
+        return POS[n.path].x;
+      }
+      place(root, 0);
+      const W = Math.max(900, li * XG + 140);
+      const H = Math.max(200, Object.values(POS).reduce((m, p) => Math.max(m, p.y), 0) + 70);
+      return { POS, W, H };
+    }
+
+    /* ─── svg render ─────────────────────────────────────── */
+    function drawSVG(hostId, root, { sel = new Set(), vis = new Set(), mat = new Set() } = {}) {
+      const host = document.getElementById(hostId);
+      if (!root) { host.innerHTML = ''; return; }
+
+      const { POS, W, H } = calcLayout(root);
+
+      // collect edges
+      const edges = [];
+      function walkE(n) {
+        (n.children || []).forEach(c => {
+          const p = POS[n.path], q = POS[c.path];
+          if (p && q) edges.push([p.x, p.y, q.x, q.y]);
+          walkE(c);
+        });
+      }
+      walkE(root);
+
+      function styleFor(path) {
+        if (mat.has(path)) return { f: 'rgba(34,201,122,.18)', k: '#22c97a', w: 2, t: '#22c97a', glow: true };
+        if (vis.has(path)) return { f: 'rgba(245,166,35,.15)', k: '#f5a623', w: 1.5, t: '#f5a623', glow: false };
+        if (sel.has(path)) return { f: 'rgba(124,106,247,.2)', k: '#7c6af7', w: 2, t: '#a48fff', glow: false };
+        return null;
+      }
+
+      function h(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+      function short(s) { return s.length > 11 ? s.slice(0, 10) + '…' : s; }
+
+      let out = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"
+    xmlns="http://www.w3.org/2000/svg" style="font-family:var(--fn);display:block">
+  <defs>
+    <filter id="glo" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>`;
+
+      edges.forEach(([x1, y1, x2, y2]) => {
+        out += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#1a2a40" stroke-width="1.5"/>`;
+      });
+
+      Object.entries(POS).forEach(([path, { x, y, n }]) => {
+        const st = styleFor(path);
+        const isF = n.type === 'folder';
+        const f = st ? st.f : (isF ? '#0c1524' : '#080f1e');
+        const k = st ? st.k : (isF ? '#4f46e5' : '#334155');
+        const w = st ? st.w : 1.5;
+        const t = st ? st.t : (isF ? '#818cf8' : '#64748b');
+        const gl = st?.glow ? ' filter="url(#glo)"' : '';
+        const lb = h(short(n.name));
+
+        if (isF) {
+          out += `<g${gl}><rect x="${x - 43}" y="${y - 19}" width="86" height="38" rx="7"
+        fill="${f}" stroke="${k}" stroke-width="${w}"/>
+        <text x="${x}" y="${y - 1}" text-anchor="middle" dominant-baseline="middle"
+          font-size="11" font-weight="600" fill="${t}">${lb}</text>
+        <text x="${x}" y="${y + 13}" text-anchor="middle" font-size="9" fill="#1e3a52">folder</text>
+      </g>`;
+        } else {
+          out += `<g${gl}><ellipse cx="${x}" cy="${y}" rx="41" ry="19"
+        fill="${f}" stroke="${k}" stroke-width="${w}"/>
+        <text x="${x}" y="${y + 1}" text-anchor="middle" dominant-baseline="middle"
+          font-size="10" font-weight="500" fill="${t}">${lb}</text>
+      </g>`;
+        }
+      });
+
+      out += `</svg>`;
+      host.innerHTML = out;
+    }
+
+    /* ─── sidebar ────────────────────────────────────────── */
+    // expanded set: tracks which folder paths are open
+    const OPEN = new Set();
+
+    function renderSidebar() {
+      REG.clear();
+      REGK = 0;
+      const host = document.getElementById('ftree');
+      if (!TREE) { host.innerHTML = ''; return; }
+      host.innerHTML = buildHTML(TREE, 0);
+    }
+
+    function buildHTML(node, depth) {
+      const key = REGK++;
+      REG.set(key, node);
+
+      const isF = node.type === 'folder';
+      const isSel = SEL && SEL.path === node.path;
+      const isOpen = OPEN.has(node.path);
+      const icon = isF ? '📁' : fileIcon(node.name);
+      const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const pad = 10 + depth * 14;
+
+      let html = `
+  <div>
+    <div class="tn${isSel ? ' sel' : ''}"
+         id="tn-${key}"
+         style="padding-left:${pad}px"
+         data-key="${key}">
+      <span class="arr${isF && isOpen ? ' op' : ''}" id="arr-${key}">${isF ? '▸' : ''}</span>
+      <span style="font-size:13px;flex-shrink:0">${icon}</span>
+      <span class="nm">${esc(node.name)}</span>
+      <button class="x" data-del="${key}" title="Delete">✕</button>
+    </div>`;
+
+      // children: only render if folder AND open
+      if (isF && node.children && node.children.length > 0) {
+        html += `<div id="ch-${key}" style="display:${isOpen ? 'block' : 'none'}">`;
+        node.children.forEach(c => { html += buildHTML(c, depth + 1); });
+        html += `</div>`;
+      }
+
+      html += `</div>`;
+      return html;
+    }
+
+    function fileIcon(name) {
+      const m = {
+        pdf: '📄', txt: '📝', py: '🐍', js: '📜', yaml: '⚙️', json: '📋',
+        jpg: '🖼️', jpeg: '🖼️', png: '🖼️', mp3: '🎵', log: '🗒️', md: '📖'
+      };
+      return m[name.split('.').pop().toLowerCase()] || '📄';
+    }
+
+    function clickNode(key) {
+      const node = REG.get(key);
+      if (!node) return;
+
+      SEL = node;
+
+      if (node.type === 'folder') {
+        // toggle open/closed
+        if (OPEN.has(node.path)) {
+          OPEN.delete(node.path);
+        } else {
+          OPEN.add(node.path);
+        }
+      }
+
+      // re-render sidebar (now with updated OPEN set and SEL)
+      renderSidebar();
+      S_SEL = new Set([node.path]);
+      updateFilesUI();
+      drawSVG('svg-tree', TREE, { sel: S_SEL });
+    }
+
+    function clickDel(key) {
+      const node = REG.get(key);
+      if (node) deleteNode(node);
+    }
+
+    /* ─── files ui ───────────────────────────────────────── */
+    function updateFilesUI() {
+      const badge = document.getElementById('sbadge');
+      const vRen = document.getElementById('v-rename');
+      const bRen = document.getElementById('b-rename');
+      const vMov = document.getElementById('v-move');
+      const bMov = document.getElementById('b-move');
+      const bDel = document.getElementById('b-delete');
+
+      if (SEL) {
+        badge.style.display = 'block';
+        badge.textContent = SEL.path;
+
+        vRen.disabled = false;
+        bRen.disabled = false;
+        vMov.disabled = false;
+        bMov.disabled = false;
+        bDel.disabled = false;
+
+        const e = s => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        document.getElementById('h-rename').innerHTML = `Renaming: <b>${e(SEL.name)}</b>`;
+        document.getElementById('h-move').innerHTML = `Moving: <b>${e(SEL.path)}</b>`;
+        document.getElementById('h-delete').innerHTML = `Delete <b>"${e(SEL.name)}"</b>${SEL.type === 'folder' ? ' + children' : ''}`;
+        const pp = SEL.type === 'folder' ? SEL.path : (SEL.path.split('/').slice(0, -1).join('/') || '/');
+        document.getElementById('h-create').innerHTML = `Creating inside: <b>${e(pp)}</b>`;
+      } else {
+        badge.style.display = 'none';
+        vRen.disabled = true; bRen.disabled = true;
+        vMov.disabled = true; bMov.disabled = true;
+        bDel.disabled = true;
+        document.getElementById('h-rename').textContent = '← Select a node in the sidebar first';
+        document.getElementById('h-move').textContent = '← Select a node, then enter destination';
+        document.getElementById('h-delete').textContent = '← Select a node to delete it';
+        document.getElementById('h-create').textContent = 'Creates inside selected folder (or root /)';
+      }
+    }
+
+    function setCT(t) {
+      CTYPE = t;
+      document.getElementById('t-folder').classList.toggle('on', t === 'folder');
+      document.getElementById('t-file').classList.toggle('on', t === 'file');
+    }
+
+    async function doCreate() {
+      const name = document.getElementById('v-name').value.trim();
+      if (!name) { toast('Enter a name', 1); return; }
+      const pp = SEL
+        ? (SEL.type === 'folder' ? SEL.path : (SEL.path.split('/').slice(0, -1).join('/') || '/'))
+        : '/';
+      const d = await call('POST', '/create', { parent_path: pp, name, node_type: CTYPE });
+      if (d) {
+        TREE = d.tree;
+        resolveSel();
+        document.getElementById('v-name').value = '';
+        renderSidebar();
+        drawAll();
+        toast(`Created ${CTYPE} "${name}"`);
+      }
+    }
+
+    async function doRename() {
+      const nm = document.getElementById('v-rename').value.trim();
+      if (!nm) { toast('Enter a new name', 1); return; }
+      if (!SEL) { toast('Select a node first', 1); return; }
+      const d = await call('PUT', '/rename', { path: SEL.path, new_name: nm });
+      if (d) {
+        TREE = d.tree;
+        SEL = null;
+        S_SEL = new Set();
+        document.getElementById('v-rename').value = '';
+        renderSidebar();
+        updateFilesUI();
+        drawAll();
+        toast(`Renamed to "${nm}"`);
+      }
+    }
+
+    async function doMove() {
+      const dst = document.getElementById('v-move').value.trim();
+      if (!dst) { toast('Enter destination path', 1); return; }
+      if (!SEL) { toast('Select a node first', 1); return; }
+      const d = await call('PUT', '/move', { src_path: SEL.path, dest_path: dst });
+      if (d) {
+        TREE = d.tree;
+        SEL = null;
+        S_SEL = new Set();
+        document.getElementById('v-move').value = '';
+        renderSidebar();
+        updateFilesUI();
+        drawAll();
+        toast(`Moved to ${dst}`);
+      }
+    }
+
+    async function doDelete() {
+      if (!SEL) { toast('Select a node first', 1); return; }
+      await deleteNode(SEL);
+    }
+
+    async function deleteNode(node) {
+      const d = await call('DELETE', '/delete', { path: node.path });
+      if (d) {
+        TREE = d.tree;
+        if (SEL && SEL.path === node.path) { SEL = null; S_SEL = new Set(); }
+        OPEN.delete(node.path);
+        renderSidebar();
+        updateFilesUI();
+        drawAll();
+        toast(`Deleted "${node.name}"`);
+      }
+    }
+
+    /* ─── traversal ──────────────────────────────────────── */
+    const DESC = {
+      dfs_recursive: `<b>DFS Recursive</b> — uses Python's <i>call stack</i>. Dives deep before backtracking. Each function call adds a frame to the stack. Clean code, but risks stack overflow on very deep trees.`,
+      dfs_iterative: `<b>DFS Iterative</b> — same traversal order as recursive, but uses an <i>explicit stack (Python list)</i>. No recursion limit. Children pushed in reverse so left child processes first.`,
+      bfs: `<b>BFS (Breadth-First)</b> — uses a <i>queue (collections.deque)</i>. Visits every node at depth N before depth N+1. Level-by-level. Best for finding nodes closest to the root.`,
+    };
+    const SPDL = ['', 'slowest', 'slow', 'slow', 'medium', 'medium', 'medium', 'fast', 'fast', 'fastest'];
+
+    function setTM(m) {
+      TM = m;
+      document.querySelectorAll('.mt').forEach(b => b.classList.remove('on'));
+      document.getElementById('mt-' + m).classList.add('on');
+      document.getElementById('abox').innerHTML = DESC[m];
+      resetTrav();
+      loadTrav();
+    }
+
+    function setSpd(v) {
+      TSPD = v;
+      document.getElementById('spdl').textContent = SPDL[v] || '';
+    }
+
+    async function loadTrav() {
+      const d = await call('GET', '/traversal/' + TM);
+      if (!d) return;
+      TSTEPS = d.order;
+      renderChips();
+      document.getElementById('stl').textContent = `Step 0 / ${TSTEPS.length}`;
+      drawSVG('svg-trav', TREE, {});
+    }
+
+    function renderChips() {
+      document.getElementById('chips').innerHTML = TSTEPS.map((p, i) => {
+        const lbl = p === '/' ? '/' : (p.split('/').pop() || p);
+        const cls = i < TIDX ? 'chip v' : i === TIDX ? 'chip c' : 'chip';
+        return `<div class="${cls}" id="chip-${i}">${lbl.replace(/</g, '&lt;')}</div>`;
+      }).join('');
+    }
+
+    function togglePlay() {
+      if (TTIMER) {
+        clearInterval(TTIMER); TTIMER = null;
+        document.getElementById('pbtn').textContent = '▶ Play';
+        return;
+      }
+      if (TIDX >= TSTEPS.length - 1) { TIDX = -1; renderChips(); }
+      document.getElementById('pbtn').textContent = '⏸ Pause';
+      const delay = Math.round(1100 - TSPD * 110);
+
+      TTIMER = setInterval(() => {
+        TIDX++;
+        renderChips();
+        const cur = document.getElementById('chip-' + TIDX);
+        if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+        document.getElementById('stl').textContent = `Step ${TIDX + 1} / ${TSTEPS.length}`;
+        drawSVG('svg-trav', TREE, {
+          vis: new Set(TSTEPS.slice(0, TIDX)),
+          sel: new Set([TSTEPS[TIDX]]),
+        });
+        if (TIDX >= TSTEPS.length - 1) {
+          clearInterval(TTIMER); TTIMER = null;
+          document.getElementById('pbtn').textContent = '↺ Replay';
+        }
+      }, delay);
+    }
+
+    function resetTrav() {
+      if (TTIMER) { clearInterval(TTIMER); TTIMER = null; }
+      TIDX = -1;
+      document.getElementById('pbtn').textContent = '▶ Play';
+      document.getElementById('stl').textContent = `Step 0 / ${TSTEPS.length}`;
+      renderChips();
+      drawSVG('svg-trav', TREE, {});
+    }
+
+    /* ─── search ─────────────────────────────────────────── */
+    function setSM(m) {
+      SM = m;
+      document.getElementById('pill-dfs').classList.toggle('on', m === 'dfs');
+      document.getElementById('pill-bfs').classList.toggle('on', m === 'bfs');
+    }
+
+    async function doSearch() {
+      const q = document.getElementById('sq').value.trim();
+      if (!q) { toast('Enter a search term', 1); return; }
+      if (SATIMER) { clearInterval(SATIMER); SATIMER = null; }
+      const d = await call('POST', '/search', { name: q, method: SM });
+      if (!d) return;
+
+      const { visited, matches } = d;
+
+      const se = document.getElementById('sstats');
+      se.style.display = 'flex';
+      se.innerHTML = `
+    <span>Visited: <b style="color:var(--am)">${visited.length}</b></span>
+    <span>Matches: <b style="color:var(--gr)">${matches.length}</b></span>
+    <span>Method: <b style="color:var(--pu-b)">${SM.toUpperCase()}</b></span>`;
+
+      const e = s => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      document.getElementById('smatch').innerHTML = matches.length
+        ? matches.map(p => `<span class="mc">✓ ${e(p)}</span>`).join('')
+        : `<span style="color:var(--re);font-size:12px">No matches for "${e(q)}"</span>`;
+
+      let step = 0;
+      const per = Math.max(80, Math.min(400, Math.floor(1800 / Math.max(visited.length, 1))));
+      drawSVG('svg-search', TREE, {});
+      SATIMER = setInterval(() => {
+        step++;
+        drawSVG('svg-search', TREE, {
+          vis: new Set(visited.slice(0, step)),
+          mat: new Set(matches.filter(x => visited.indexOf(x) < step)),
+        });
+        if (step >= visited.length) { clearInterval(SATIMER); SATIMER = null; }
+      }, per);
+    }
+
+    /* ─── section nav ────────────────────────────────────── */
+    const META = {
+      files: { t: '📁 Files', d: 'Create, delete, rename and move nodes' },
+      tree: { t: '🌳 Tree View', d: 'Visual SVG diagram of the whole file system' },
+      traversal: { t: '🔄 Traversal', d: 'Animated DFS & BFS — watch the algorithm step through' },
+      search: { t: '🔍 Search', d: 'Animated search — every visited node highlighted live' },
+    };
+
+    function go(sec) {
+      document.querySelectorAll('.sec').forEach(s => s.classList.remove('on'));
+      document.getElementById('sec-' + sec).classList.add('on');
+      document.querySelectorAll('.nb').forEach(b => b.classList.remove('on'));
+      document.getElementById('nb-' + sec).classList.add('on');
+      document.getElementById('pt').textContent = META[sec].t;
+      document.getElementById('pd').textContent = META[sec].d;
+      drawAll();
+    }
+
+    /* ─── draw / refresh ─────────────────────────────────── */
+    function drawAll() {
+      drawSVG('svg-tree', TREE, { sel: S_SEL });
+      drawSVG('svg-trav', TREE, {});
+      drawSVG('svg-search', TREE, {});
+    }
+
+    /* ─── notifications ──────────────────────────────────── */
+    function showErr(msg) {
+      document.getElementById('emsg').textContent = msg;
+      document.getElementById('ebar').style.display = 'flex';
+    }
+    function hideErr() { document.getElementById('ebar').style.display = 'none'; }
+
+    let TT;
+    function toast(msg, warn = 0) {
+      const el = document.getElementById('toast');
+      el.textContent = (warn ? '⚠ ' : '✓ ') + msg;
+      el.style.background = warn ? 'var(--am)' : 'var(--gr)';
+      el.classList.add('on');
+      clearTimeout(TT);
+      TT = setTimeout(() => el.classList.remove('on'), 2400);
+    }
+
+    /* ─── sidebar event delegation ───────────────────────── */
+    document.getElementById('ftree').addEventListener('click', function (e) {
+      // Handle delete button
+      const delBtn = e.target.closest('[data-del]');
+      if (delBtn) {
+        e.stopPropagation();
+        const key = parseInt(delBtn.getAttribute('data-del'), 10);
+        const node = REG.get(key);
+        if (node) deleteNode(node);
+        return;
+      }
+      // Handle node row click
+      const tn = e.target.closest('[data-key]');
+      if (tn) {
+        const key = parseInt(tn.getAttribute('data-key'), 10);
+        clickNode(key);
+      }
+    });
+
+    /* ─── boot ───────────────────────────────────────────── */
+    (async () => {
+      document.getElementById('abox').innerHTML = DESC[TM];
+      const d = await call('GET', '/tree');
+      if (!d) return;
+      TREE = d;
+      // open root by default
+      OPEN.add('/');
+      renderSidebar();
+      drawAll();
+      await loadTrav();
+    })();
+  </script>
+</body>
+
+</html>
